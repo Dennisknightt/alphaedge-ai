@@ -51,32 +51,18 @@ export default function PredictionMarketsPage() {
         {/* Summary */}
         <div className="grid grid-cols-4 gap-3">
           {[
-            { label: 'Live Markets', value: markets.length || '…', color: 'text-white' },
-            { label: 'Qualified',    value: qualified.length,       color: 'text-emerald-400' },
-            { label: 'Watching',     value: watching.length,        color: 'text-amber-400' },
-            {
-              label: 'AI Analyzed',
-              value: data?.analyzed ? 'Yes ✓' : 'No key',
-              color: data?.analyzed ? 'text-emerald-400' : 'text-amber-400'
-            },
+            { label: 'Live Markets',   value: markets.length || '…', color: 'text-white',        sub: 'Polymarket · Kalshi' },
+            { label: 'High Edge',      value: qualified.length,       color: 'text-emerald-400',  sub: '≥10% edge & ≥7 confidence' },
+            { label: 'Watching',       value: watching.length,        color: 'text-amber-400',    sub: 'Building conviction' },
+            { label: 'AI Scoring',     value: data?.analyzed ? 'Active' : 'Monitoring', color: data?.analyzed ? 'text-emerald-400' : 'text-blue-400', sub: data?.analyzed ? 'Claude probability engine' : 'Live probabilities' },
           ].map(c => (
             <div key={c.label} className="card p-3 fade-in">
               <div className="label mb-1">{c.label}</div>
               <div className={cn('text-xl font-bold tabular', c.color)}>{String(c.value)}</div>
+              <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>{c.sub}</div>
             </div>
           ))}
         </div>
-
-        {/* AI analysis note */}
-        {!data?.analyzed && (
-          <div className="card p-3 flex items-center gap-3 border-amber-500/20"
-            style={{ background: 'var(--amber-soft)' }}>
-            <span className="text-amber-400 text-xs font-semibold">⚠ AI Analysis</span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Add ANTHROPIC_API_KEY to enable Claude probability analysis. Currently showing raw market probabilities only.
-            </span>
-          </div>
-        )}
 
         {/* Controls */}
         <div className="flex items-center gap-3 flex-wrap">

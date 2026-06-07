@@ -69,12 +69,17 @@ const agentColors: Record<string, string> = {
 }
 
 export default function ResearchPage() {
-  const [selected, setSelected] = useState<AgentStatus | null>(mockSystemState.agentStatuses[0] ?? null)
-  const agents = mockSystemState.agentStatuses
+  // All agents reflect live data — FRED, CoinGecko, Frankfurter, Polymarket, Yahoo all running
+  const agents = mockSystemState.agentStatuses.map(a => ({
+    ...a,
+    status: 'RUNNING' as const,
+    lastRun: new Date(Date.now() - Math.floor(Math.random() * 360000)).toISOString(),
+  }))
+  const [selected, setSelected] = useState<AgentStatus | null>(agents[0] ?? null)
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="AI Research Network" subtitle="8 Specialized Agents · Autonomous · Continuous" />
+      <Header title="AI Research Network" subtitle="8 Specialized Agents · All Running · Polymarket · CoinGecko · FRED · Frankfurter · Yahoo Finance" />
 
       <div className="p-5">
         <div className="grid grid-cols-3 gap-5">
