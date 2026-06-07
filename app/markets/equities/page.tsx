@@ -8,7 +8,7 @@ import { BarChart2, TrendingUp, TrendingDown } from 'lucide-react'
 export default function EquitiesPage() {
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Capital Markets" subtitle="US Equities · ETFs · Bonds · Commodities · Indices" systemState={mockSystemState} />
+      <Header title="Capital Markets" subtitle="US Equities · ETFs · Bonds · Commodities · Indices" />
 
       <div className="p-5 space-y-4">
 

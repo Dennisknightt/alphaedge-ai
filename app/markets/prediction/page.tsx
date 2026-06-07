@@ -57,7 +57,7 @@ export default function PredictionMarketsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Prediction Markets" subtitle="Polymarket · Kalshi · Event Contracts" systemState={mockSystemState} />
+      <Header title="Prediction Markets" subtitle="Polymarket · Kalshi · Event Contracts" />
 
       <div className="p-5 space-y-4">
 

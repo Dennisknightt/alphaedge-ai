@@ -1,19 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { RefreshCw, Bell, Shield, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
-import { cn, fmtTime } from '@/lib/utils'
-import type { SystemState } from '@/types'
+import { Bell, RefreshCw, ChevronDown, Search, Menu } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useApp } from '@/lib/context'
 
 interface HeaderProps {
   title: string
   subtitle?: string
-  systemState?: SystemState
-  onRefresh?: () => void
   isRefreshing?: boolean
+  onRefresh?: () => void
 }
 
-export default function Header({ title, subtitle, systemState, onRefresh, isRefreshing }: HeaderProps) {
+const MODE_CONFIG = {
+  beginner:      { label: 'Beginner',      color: 'badge-green' },
+  professional:  { label: 'Professional',  color: 'badge-blue' },
+  institutional: { label: 'Institutional', color: 'badge-purple' },
+  research:      { label: 'Research',      color: 'badge-amber' },
+}
+
+export default function Header({ title, subtitle, isRefreshing, onRefresh }: HeaderProps) {
+  const { setSearchOpen, setNotifOpen, sidebarCollapsed, toggleSidebar, mode } = useApp()
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
@@ -21,67 +28,70 @@ export default function Header({ title, subtitle, systemState, onRefresh, isRefr
     return () => clearInterval(t)
   }, [])
 
-  const status = systemState?.status ?? 'ACTIVE'
-  const statusConfig = {
-    ACTIVE: { color: 'text-emerald-400', bg: 'badge-green', label: 'SYSTEM ACTIVE', icon: CheckCircle },
-    PROTECTION: { color: 'text-red-400', bg: 'badge-red', label: 'PROTECTION MODE', icon: Shield },
-    SUSPENDED: { color: 'text-amber-400', bg: 'badge-yellow', label: 'SUSPENDED', icon: AlertTriangle },
-    IDLE: { color: 'text-slate-400', bg: 'badge-muted', label: 'IDLE', icon: Clock },
-  }[status]
+  const modeConf = MODE_CONFIG[mode]
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-3"
-      style={{ background: 'rgba(2,4,10,0.95)', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}>
+    <header className="sticky top-0 z-30 flex items-center gap-3 px-5"
+      style={{
+        height: 'var(--header-height)',
+        background: 'rgba(2,4,8,0.92)',
+        borderBottom: '1px solid var(--border)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}>
+
+      {/* Mobile / collapse toggle */}
+      <button onClick={toggleSidebar}
+        className="p-1.5 rounded-md hover:bg-white/5 transition-colors lg:hidden"
+        style={{ color: 'var(--text-muted)' }}>
+        <Menu size={16} />
+      </button>
 
       {/* Title */}
-      <div>
-        <h1 className="text-base font-bold text-white">{title}</h1>
-        {subtitle && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>}
+      <div className="flex-1 min-w-0">
+        <h1 className="text-sm font-semibold text-white leading-tight truncate">{title}</h1>
+        {subtitle && <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>}
       </div>
 
       {/* Right controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
 
-        {/* System status */}
-        {systemState && (
-          <div className={cn('badge', statusConfig.bg, 'flex items-center gap-1.5')}>
-            <statusConfig.icon size={10} />
-            {statusConfig.label}
-          </div>
-        )}
+        {/* Search */}
+        <button onClick={() => setSearchOpen(true)}
+          className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+          <Search size={12} />
+          <span>Search</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)' }}>⌘K</span>
+        </button>
 
         {/* Mode badge */}
-        {systemState && (
-          <div className="badge badge-purple">
-            {systemState.executionMode} MODE
-          </div>
-        )}
+        <div className={cn('badge hidden sm:flex', modeConf.color)}>{modeConf.label}</div>
 
         {/* Clock */}
-        <div className="text-xs font-mono tabular" style={{ color: 'var(--text-secondary)' }}>
-          <span style={{ color: 'var(--text-muted)' }}>UTC </span>
+        <div className="hidden lg:block text-[11px] mono tabular"
+          style={{ color: 'var(--text-muted)', minWidth: 64, textAlign: 'right' }}>
           {time.toUTCString().slice(17, 25)}
+          <div className="text-[9px]" style={{ color: 'var(--text-dim)' }}>UTC</div>
         </div>
 
         {/* Refresh */}
         {onRefresh && (
           <button onClick={onRefresh}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-              'hover:bg-blue-500/10 hover:text-blue-400',
-              isRefreshing && 'opacity-50 pointer-events-none'
-            )}
-            style={{ color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
-            <RefreshCw size={12} className={cn(isRefreshing && 'animate-spin')} />
-            {isRefreshing ? 'Scanning…' : 'Refresh'}
+            className="p-1.5 rounded-md hover:bg-white/5 transition-colors"
+            style={{ color: isRefreshing ? 'var(--accent)' : 'var(--text-muted)' }}
+            data-tooltip="Refresh data">
+            <RefreshCw size={14} className={cn(isRefreshing && 'animate-spin')} />
           </button>
         )}
 
         {/* Notifications */}
-        <button className="relative p-1.5 rounded-md hover:bg-white/5 transition-colors"
+        <button onClick={() => setNotifOpen(true)}
+          className="relative p-1.5 rounded-md hover:bg-white/5 transition-colors"
           style={{ color: 'var(--text-muted)' }}>
-          <Bell size={15} />
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-blue-500" />
+          <Bell size={14} />
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full live-dot"
+            style={{ background: 'var(--accent)' }} />
         </button>
       </div>
     </header>

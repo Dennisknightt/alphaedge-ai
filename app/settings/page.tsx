@@ -22,7 +22,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Settings" subtitle="API Configuration · Execution Mode · System Preferences" systemState={mockSystemState} />
+      <Header title="Settings" subtitle="API Configuration · Execution Mode · System Preferences" />
 
       <div className="p-5 space-y-5 max-w-3xl">
 

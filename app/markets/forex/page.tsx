@@ -14,7 +14,7 @@ const trendIcon = (trend: string) => {
 export default function ForexPage() {
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Forex Markets" subtitle="Major Pairs · Cross Pairs · EM Currencies" systemState={mockSystemState} />
+      <Header title="Forex Markets" subtitle="Major Pairs · Cross Pairs · EM Currencies" />
 
       <div className="p-5 space-y-4">
 

@@ -13,7 +13,7 @@ export default function CryptoMarketsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Crypto Markets" subtitle="Bitcoin · Ethereum · Solana · Top 500" systemState={mockSystemState} />
+      <Header title="Crypto Markets" subtitle="Bitcoin · Ethereum · Solana · Top 500" />
 
       <div className="p-5 space-y-4">
 

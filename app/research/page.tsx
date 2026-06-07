@@ -74,7 +74,7 @@ export default function ResearchPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="AI Research Network" subtitle="8 Specialized Agents · Autonomous · Continuous" systemState={mockSystemState} />
+      <Header title="AI Research Network" subtitle="8 Specialized Agents · Autonomous · Continuous" />
 
       <div className="p-5">
         <div className="grid grid-cols-3 gap-5">

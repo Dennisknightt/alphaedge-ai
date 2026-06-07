@@ -38,7 +38,7 @@ export default function BriefingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Daily Executive Briefing" subtitle={`Generated ${generatedAt.toLocaleString()}`} systemState={mockSystemState} />
+      <Header title="Daily Executive Briefing" subtitle={`Generated ${generatedAt.toLocaleString()}`} />
 
       <div className="p-5 space-y-5">
 

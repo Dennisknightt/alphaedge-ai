@@ -82,7 +82,7 @@ export default function OpportunitiesPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Opportunity Center" subtitle="Multi-Agent Consensus · Trade Approval Framework" systemState={mockSystemState} />
+      <Header title="Opportunity Center" subtitle="Multi-Agent Consensus · Trade Approval Framework" />
 
       <div className="p-5">
         <div className="grid grid-cols-3 gap-5">

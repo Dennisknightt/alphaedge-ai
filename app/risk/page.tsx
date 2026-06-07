@@ -63,7 +63,7 @@ export default function RiskPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Risk Management" subtitle="Capital Protection Engine · Hard Limits · Kill Switch System" systemState={mockSystemState} />
+      <Header title="Risk Management" subtitle="Capital Protection Engine · Hard Limits · Kill Switch System" />
 
       <div className="p-5 space-y-5">
 

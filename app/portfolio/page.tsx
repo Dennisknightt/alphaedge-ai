@@ -31,7 +31,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Portfolio" subtitle="Capital Management · P&L Tracking · Risk Analytics" systemState={mockSystemState} />
+      <Header title="Portfolio" subtitle="Capital Management · P&L Tracking · Risk Analytics" />
 
       <div className="p-5 space-y-4">
 
