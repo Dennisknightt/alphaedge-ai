@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
-import { analyzeMarket } from '@/lib/claude'
-import type { Market } from '@/types'
+import type { PredictionMarket } from '@/types'
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const market: Market = body.market
+    const market: PredictionMarket = body.market
 
     if (!market) {
       return NextResponse.json({ error: 'market required' }, { status: 400 })
@@ -18,6 +17,8 @@ export async function POST(req: Request) {
       )
     }
 
+    // Lazy import to avoid loading SDK at edge
+    const { analyzeMarket } = await import('@/lib/claude')
     const analysis = await analyzeMarket(market)
     return NextResponse.json({ analysis })
   } catch (err) {
