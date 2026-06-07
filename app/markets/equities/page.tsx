@@ -1,148 +1,190 @@
 'use client'
 
+import { useState } from 'react'
 import Header from '@/components/layout/Header'
-import { mockEquities, mockSystemState } from '@/lib/mock-data'
+import { useEquityQuote, useHistory, useMacro } from '@/hooks/useMarkets'
 import { cn, fmtCurrency, fmtPct, fmtCompact, fmt } from '@/lib/utils'
 import { BarChart2, TrendingUp, TrendingDown } from 'lucide-react'
+import { SkeletonTable, SkeletonChart } from '@/components/ui/SkeletonLoader'
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
+
+const TICKERS = [
+  { ticker: 'SPY',  name: 'S&P 500 ETF',     sector: 'Index ETF',      color: '#3b82f6' },
+  { ticker: 'NVDA', name: 'NVIDIA',           sector: 'Technology',     color: '#10b981' },
+  { ticker: 'AAPL', name: 'Apple',            sector: 'Technology',     color: '#6366f1' },
+  { ticker: 'MSFT', name: 'Microsoft',        sector: 'Technology',     color: '#8b5cf6' },
+  { ticker: 'META', name: 'Meta',             sector: 'Technology',     color: '#f59e0b' },
+  { ticker: 'GOOGL',name: 'Alphabet',         sector: 'Technology',     color: '#06b6d4' },
+  { ticker: 'AMZN', name: 'Amazon',           sector: 'Consumer',       color: '#f43f5e' },
+  { ticker: 'TSLA', name: 'Tesla',            sector: 'Consumer',       color: '#ef4444' },
+  { ticker: 'JPM',  name: 'JPMorgan',         sector: 'Financials',     color: '#84cc16' },
+  { ticker: 'GLD',  name: 'SPDR Gold ETF',    sector: 'Commodities',    color: '#fbbf24' },
+]
+
+function TickerCard({ ticker, name, sector, color }: { ticker: string; name: string; sector: string; color: string }) {
+  const { data, loading } = useEquityQuote(ticker)
+
+  if (loading || !data) {
+    return (
+      <div className="card p-4">
+        <div className="skeleton h-3 w-16 mb-2 rounded" />
+        <div className="skeleton h-6 w-24 mb-1 rounded" />
+        <div className="skeleton h-3 w-12 rounded" />
+      </div>
+    )
+  }
+
+  const pos = data.change1dPct >= 0
+
+  return (
+    <div className="card p-4 hover-lift fade-in">
+      <div className="flex items-start justify-between mb-2">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+          style={{ background: `${color}20`, color }}>
+          {ticker.slice(0, 2)}
+        </div>
+        <span className={cn('badge text-[9px]', pos ? 'badge-green' : 'badge-red')}>
+          {pos ? '▲' : '▼'} {fmtPct(Math.abs(data.change1dPct))}
+        </span>
+      </div>
+      <div className="text-xs font-bold text-white">{ticker}</div>
+      <div className="text-[10px] mb-1" style={{ color: 'var(--text-dim)' }}>{name}</div>
+      <div className="text-lg font-bold mono tabular text-white">
+        {fmtCurrency(data.price, data.price > 1000)}
+      </div>
+      <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+        Vol: {fmtCompact(data.volume ?? 0)}
+      </div>
+    </div>
+  )
+}
 
 export default function EquitiesPage() {
+  const { data: macroData } = useMacro()
+  const spyHistory = useHistory('sp500', 'SPY', '2010-01-01')
+  const [selectedTicker, setSelectedTicker] = useState('SPY')
+  const tickerHistory = useHistory('sp500', selectedTicker, '2020-01-01')
+
+  const macro  = macroData?.macro
+  const regime = macroData?.regime
+
+  // Sample SPY history for chart
+  const spyPoints = (spyHistory.data?.points ?? [])
+    .filter((_: any, i: number) => i % 20 === 0)
+    .slice(-200)
+
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Capital Markets" subtitle="US Equities · ETFs · Bonds · Commodities · Indices" />
+      <Header
+        title="Capital Markets"
+        subtitle="Yahoo Finance · Live Prices · Historical since 2010"
+      />
 
       <div className="p-5 space-y-4">
 
-        {/* Summary */}
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { label: 'Assets Tracked', value: '2,400+', color: 'text-white' },
-            { label: 'Buy Signals', value: '4', color: 'text-emerald-400' },
-            { label: 'Sell Signals', value: '1', color: 'text-red-400' },
-            { label: 'Market Regime', value: 'RISK-ON', color: 'text-emerald-400' },
-          ].map(c => (
-            <div key={c.label} className="card p-3">
-              <div className="text-[10px] font-semibold tracking-wider uppercase mb-1" style={{ color: 'var(--text-muted)' }}>{c.label}</div>
-              <div className={cn('text-xl font-bold tabular', c.color)}>{c.value}</div>
+        {/* Market regime from FRED */}
+        {regime && (
+          <div className="card p-4 flex items-center gap-4">
+            <div className="flex-1">
+              <div className="label mb-1">Current Market Regime</div>
+              <div className={cn('text-xl font-bold', regime.riskScore < 50 ? 'text-emerald-400' : regime.riskScore < 70 ? 'text-amber-400' : 'text-red-400')}>
+                {regime.label}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{regime.description}</div>
             </div>
+            {macro && (
+              <div className="grid grid-cols-4 gap-4 text-xs">
+                {[
+                  { l: 'Fed Rate', v: `${fmt(macro.fedFundsRate.current, 2)}%` },
+                  { l: 'CPI YoY',  v: `${fmt(macro.cpiYoY.current, 1)}%` },
+                  { l: 'Unemployment', v: `${fmt(macro.unemployment.current, 1)}%` },
+                  { l: '10Y Yield',    v: `${fmt(macro.tenYearYield.current, 2)}%` },
+                ].map(i => (
+                  <div key={i.l}>
+                    <div style={{ color: 'var(--text-dim)' }}>{i.l}</div>
+                    <div className="font-bold text-white mono">{i.v}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ticker grid */}
+        <div className="grid grid-cols-5 gap-3">
+          {TICKERS.map(t => (
+            <TickerCard key={t.ticker} {...t} />
           ))}
         </div>
 
-        {/* Market intelligence */}
-        <div className="card p-4">
-          <div className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>EQUITY MARKET INTELLIGENCE</div>
-          <div className="grid grid-cols-4 gap-4 text-xs">
-            {[
-              { label: 'S&P 500', value: '5,842', change: '+0.82%', note: 'Above 20-DMA', positive: true },
-              { label: 'NASDAQ', value: '19,124', change: '+1.14%', note: 'Tech leadership', positive: true },
-              { label: '10Y Yield', value: '4.31%', change: '-0.04%', note: 'Slightly declining', positive: true },
-              { label: 'VIX', value: '13.2', change: '-0.8', note: 'Low fear — caution', positive: true },
-            ].map(idx => (
-              <div key={idx.label} className="card-elevated p-3 rounded-lg">
-                <div className="text-[10px] text-slate-500 mb-0.5">{idx.label}</div>
-                <div className="text-base font-bold text-white">{idx.value}</div>
-                <div className={cn('text-xs font-semibold', idx.positive ? 'text-emerald-400' : 'text-red-400')}>{idx.change}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">{idx.note}</div>
+        {/* S&P 500 Historical Chart */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-sm font-semibold text-white">S&P 500 (SPY) Since 2010</div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {spyHistory.data?.count ? `${spyHistory.data.count.toLocaleString()} trading days · Yahoo Finance` : 'Loading…'}
               </div>
-            ))}
+            </div>
+            <div className="badge badge-blue">15-Year Performance</div>
           </div>
+          {spyHistory.loading || spyPoints.length === 0 ? (
+            <div className="skeleton h-48 w-full rounded-lg" />
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={spyPoints}>
+                <defs>
+                  <linearGradient id="spyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="date" tick={{ fill: 'var(--text-dim)', fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: 'var(--text-dim)', fontSize: 10 }} axisLine={false} tickLine={false}
+                  tickFormatter={v => `$${v.toFixed(0)}`} width={44} />
+                <Tooltip contentStyle={{ background: '#0d1120', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, fontSize: 11 }}
+                  formatter={(v) => [`$${Number(v).toFixed(2)}`, 'SPY']} />
+                <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={1.5} fill="url(#spyGrad)" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
-        {/* Equities table */}
-        <div className="card overflow-hidden">
-          <div className="flex items-center gap-2 p-4 border-b" style={{ borderColor: 'var(--border)' }}>
-            <BarChart2 size={14} className="text-purple-400" />
-            <span className="text-sm font-semibold text-white">High-Priority Watchlist</span>
-          </div>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Ticker</th>
-                <th>Company</th>
-                <th>Sector</th>
-                <th>Price</th>
-                <th>1D</th>
-                <th>5D</th>
-                <th>P/E</th>
-                <th>Market Cap</th>
-                <th>Rel Volume</th>
-                <th>Rating</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockEquities.map(eq => (
-                <tr key={eq.ticker}>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center text-xs font-bold text-purple-400">
-                        {eq.ticker.slice(0, 2)}
-                      </div>
-                      <span className="text-sm font-bold text-white">{eq.ticker}</span>
-                    </div>
-                  </td>
-                  <td className="text-xs text-slate-400">{eq.name}</td>
-                  <td><span className="badge badge-muted text-[10px]">{eq.sector.slice(0, 10)}</span></td>
-                  <td className="tabular font-semibold text-white text-sm">{fmtCurrency(eq.price)}</td>
-                  <td>
-                    <div className={cn('flex items-center gap-1 text-xs font-semibold tabular',
-                      eq.change1d >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                      {eq.change1d >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                      {fmtPct(eq.change1d)}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={cn('tabular text-xs font-semibold',
-                      eq.change5d >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                      {fmtPct(eq.change5d)}
-                    </span>
-                  </td>
-                  <td className="tabular text-slate-400 text-xs">{eq.pe ? fmt(eq.pe, 1) : '—'}</td>
-                  <td className="tabular text-slate-400 text-xs">{eq.marketCap > 0 ? `$${fmtCompact(eq.marketCap)}` : '—'}</td>
-                  <td>
-                    <span className={cn('tabular text-xs font-semibold',
-                      eq.relativeVolume >= 1.1 ? 'text-amber-400' : 'text-slate-400')}>
-                      {fmt(eq.relativeVolume, 2)}x
-                    </span>
-                  </td>
-                  <td>
-                    {eq.analystRating && (
-                      <span className={cn('badge text-[10px]',
-                        eq.analystRating === 'BUY' ? 'badge-green' :
-                        eq.analystRating === 'SELL' ? 'badge-red' : 'badge-yellow')}>
-                        {eq.analystRating}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Sector performance */}
-        <div className="card p-4">
-          <div className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>SECTOR PERFORMANCE (MTD)</div>
-          <div className="grid grid-cols-5 gap-2">
-            {[
-              { sector: 'Technology', perf: 7.4, color: '#3b82f6' },
-              { sector: 'Energy', perf: 4.2, color: '#f59e0b' },
-              { sector: 'Healthcare', perf: 2.1, color: '#10b981' },
-              { sector: 'Financials', perf: 3.8, color: '#8b5cf6' },
-              { sector: 'Consumer Disc', perf: -1.2, color: '#ef4444' },
-              { sector: 'Industrials', perf: 1.9, color: '#06b6d4' },
-              { sector: 'Utilities', perf: -0.8, color: '#ef4444' },
-              { sector: 'Materials', perf: 2.6, color: '#10b981' },
-              { sector: 'Real Estate', perf: -2.1, color: '#ef4444' },
-              { sector: 'Comm. Svc', perf: 5.1, color: '#3b82f6' },
-            ].map(s => (
-              <div key={s.sector} className="text-center p-2 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                <div className="text-[10px] text-slate-400 mb-1">{s.sector}</div>
-                <div className="text-sm font-bold tabular" style={{ color: s.color }}>
-                  {s.perf >= 0 ? '+' : ''}{fmt(s.perf, 1)}%
+        {/* Sector performance from macro */}
+        {macro && (
+          <div className="card p-4">
+            <div className="label mb-3">Macro Signals for Equity Positioning</div>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              {[
+                {
+                  signal: 'Rate Environment',
+                  value: `${fmt(macro.fedFundsRate.current, 2)}% (${macro.fedFundsRate.current > macro.fedFundsRate.previous ? '↑ Tightening' : macro.fedFundsRate.current < macro.fedFundsRate.previous ? '↓ Easing' : '→ Stable'})`,
+                  impact: macro.fedFundsRate.current > 4 ? 'Headwind for growth stocks, favor value' : 'Supportive for equities',
+                  color: macro.fedFundsRate.current > 4 ? 'text-red-400' : 'text-emerald-400',
+                },
+                {
+                  signal: 'Inflation Trend',
+                  value: `${fmt(macro.cpiYoY.current, 1)}% YoY (${macro.cpiYoY.current > macro.cpiYoY.previous ? '↑' : '↓'} vs prev month)`,
+                  impact: macro.cpiYoY.current > 4 ? 'High inflation: favor commodities, TIPS' : 'Disinflation: positive for duration assets',
+                  color: macro.cpiYoY.current > 4 ? 'text-amber-400' : 'text-emerald-400',
+                },
+                {
+                  signal: 'Yield Curve',
+                  value: `${macro.yieldCurveSpread >= 0 ? '+' : ''}${fmt(macro.yieldCurveSpread, 2)}% (10Y–2Y)`,
+                  impact: macro.yieldCurveSpread < 0 ? 'Inverted — recession risk, be defensive' : 'Normal — economic expansion signal',
+                  color: macro.yieldCurveSpread < 0 ? 'text-red-400' : 'text-emerald-400',
+                },
+              ].map(s => (
+                <div key={s.signal} className="card-elevated p-3 rounded-lg">
+                  <div className="label mb-1">{s.signal}</div>
+                  <div className={cn('font-bold mono mb-1', s.color)}>{s.value}</div>
+                  <div style={{ color: 'var(--text-muted)' }}>{s.impact}</div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

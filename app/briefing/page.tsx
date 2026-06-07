@@ -2,43 +2,35 @@
 
 import { useState } from 'react'
 import Header from '@/components/layout/Header'
-import { mockTradeSignals, mockSystemState, mockPortfolioMetrics, mockPredictionMarkets } from '@/lib/mock-data'
+import { useBriefing, usePredictionMarkets, useMacro, useCrypto } from '@/hooks/useMarkets'
 import { cn, fmtCurrency, fmtPct, fmt } from '@/lib/utils'
-import { FileText, Star, Zap, Shield, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react'
-
-const BRIEFING = `
-## Global Market Conditions
-
-Financial markets remain in a broadly constructive regime, with risk assets continuing to benefit from expectations of monetary policy easing. The Federal Reserve's data-dependent posture has created notable pricing inefficiencies in short-term prediction markets, where political anchoring is suppressing probabilities below what macro models suggest.
-
-The macro backdrop is supportive: Core PCE continues its disinflationary trend, labor markets are softening gradually without alarming deterioration, and the yield curve is slowly normalizing. These conditions are historically consistent with central banks pivoting toward accommodation.
-
-## Top Opportunity Highlight
-
-The most compelling opportunity today is the **Federal Reserve Q3 Rate Cut** market on Polymarket (currently priced at 41%). Our AI probability model estimates 59% — a statistically significant 18 percentage point edge. CME FedWatch futures corroborate this divergence, showing 62% probability. The market appears anchored to hawkish FOMC commentary from January, which pre-dates three sequential softer CPI prints.
-
-Secondary opportunity: **Starship Orbital 2025** (58% market vs. 76% AI estimate). Post-Flight 9 success, FAA licensing is on accelerated track. The market discount appears to be driven by historical SpaceX timeline skepticism rather than current technical evidence.
-
-## Risk Considerations
-
-- **Crypto markets** require caution: funding rates are elevated and open interest rising. BTC positions should be sized conservatively.
-- **Forex volatility** is expected to spike around the ECB decision (Jun 12) and FOMC (Jun 18). Avoid new forex positions in the 48 hours preceding these events.
-- **Equity valuations** remain stretched on a forward P/E basis. No equity signals currently meet the 8/10 confidence threshold.
-
-## Strategic Outlook (Next 48 Hours)
-
-Maintain current approved positions with original stop-loss levels. No new positions recommended pending next Fed communication. The two approved signals (Fed Rate Cut, Starship Orbital) are sized within Kelly fraction limits. Capital preservation posture remains priority. If CPI data (Jun 11) prints above 3.3%, reassess Fed Rate Cut position immediately.
-`.trim()
+import { FileText, Star, Zap, Shield, TrendingUp, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react'
+import { SkeletonCard } from '@/components/ui/SkeletonLoader'
 
 export default function BriefingPage() {
-  const [generating, setGenerating] = useState(false)
-  const [generatedAt] = useState(new Date())
+  const briefing = useBriefing()
+  const markets  = usePredictionMarkets(10)
+  const macro    = useMacro()
+  const crypto   = useCrypto()
 
-  const qualified = mockPredictionMarkets.filter(m => Math.abs(m.edge) >= 10 && m.confidence >= 8)
+  const topMarkets = (markets.data?.markets ?? []).filter(m => Math.abs(m.edge) >= 5).slice(0, 3)
+  const macroData  = macro.data?.macro
+  const regime     = macro.data?.regime
+  const global     = crypto.data?.global
+  const fng        = crypto.data?.fearGreed
+
+  const generatedAt = briefing.data?.generatedAt ? new Date(briefing.data.generatedAt) : null
+
+  const briefingText: string = briefing.data?.briefing ?? ''
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Daily Executive Briefing" subtitle={`Generated ${generatedAt.toLocaleString()}`} />
+      <Header
+        title="Daily Executive Briefing"
+        subtitle={generatedAt ? `Generated ${generatedAt.toLocaleString()} · AI-powered, live data` : 'Loading live intelligence briefing…'}
+        onRefresh={briefing.refetch}
+        isRefreshing={briefing.loading}
+      />
 
       <div className="p-5 space-y-5">
 
@@ -46,49 +38,96 @@ export default function BriefingPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText size={15} className="text-blue-400" />
-            <span className="text-sm font-semibold text-white">Intelligence Briefing — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            <span className="text-sm font-semibold text-white">
+              Intelligence Briefing — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            </span>
           </div>
-          <button
-            onClick={() => { setGenerating(true); setTimeout(() => setGenerating(false), 2000) }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-blue-400 border border-blue-500/30 hover:bg-blue-500/10 transition-all"
-          >
-            <RefreshCw size={12} className={cn(generating && 'animate-spin')} />
-            {generating ? 'Generating…' : 'Regenerate Briefing'}
-          </button>
+          {!process.env.NEXT_PUBLIC_SUPABASE_URL && (
+            <div className="badge badge-amber">Claude API Required for AI Briefing</div>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-5">
 
-          {/* Briefing text */}
+          {/* Main briefing */}
           <div className="col-span-2 space-y-4">
 
-            {/* Main briefing */}
             <div className="card p-6">
-              <div className="prose prose-invert prose-sm max-w-none">
-                {BRIEFING.split('\n\n').map((para, i) => {
-                  if (para.startsWith('## ')) {
-                    return <h3 key={i} className="text-sm font-bold text-blue-400 tracking-wide uppercase mt-4 mb-2 first:mt-0">{para.replace('## ', '')}</h3>
-                  }
-                  return (
-                    <p key={i} className="text-xs leading-relaxed mb-3" style={{ color: 'var(--text-secondary)' }}>
-                      {para.split('**').map((s, j) =>
-                        j % 2 === 1 ? <strong key={j} className="text-white font-semibold">{s}</strong> : s
-                      )}
-                    </p>
-                  )
-                })}
-              </div>
+              {briefing.loading ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <Loader2 size={24} className="animate-spin text-blue-400" />
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Claude is analyzing live market data from Polymarket, CoinGecko, FRED, and Frankfurter…
+                  </p>
+                </div>
+              ) : briefing.error ? (
+                <div>
+                  <div className="text-amber-400 text-sm font-semibold mb-3">AI Briefing requires ANTHROPIC_API_KEY</div>
+                  <div className="text-xs space-y-2" style={{ color: 'var(--text-muted)' }}>
+                    <p>Add your API key in Settings or as a Vercel environment variable to enable live Claude-powered intelligence briefings.</p>
+                    <p className="text-blue-400">The platform is still fully functional — all market data (Polymarket, CoinGecko, Frankfurter, FRED) loads without an API key.</p>
+                  </div>
+                </div>
+              ) : briefingText ? (
+                <div className="space-y-3">
+                  {briefingText.split('\n\n').map((para, i) => {
+                    if (!para.trim()) return null
+                    return (
+                      <p key={i} className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                        {para.split('**').map((s, j) =>
+                          j % 2 === 1
+                            ? <strong key={j} className="text-white font-semibold">{s}</strong>
+                            : s
+                        )}
+                      </p>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Briefing not yet generated. Click refresh to generate.</p>
+              )}
             </div>
 
-            {/* Market summaries */}
+            {/* Live market summaries */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { title: 'Prediction Markets', icon: TrendingUp, color: 'text-emerald-400', summary: '6 markets scanned. 2 qualified (≥10% edge, ≥8/10 conf). Fed Rate Cut and Starship Orbital are approved. 4 markets rejected.', badge: '2 APPROVED' },
-                { title: 'Crypto Markets', icon: Star, color: 'text-amber-400', summary: 'BTC accumulation signals strong. No directional crypto trades qualify today — funding rates elevated, position sizing insufficient edge vs risk.', badge: 'MONITORING' },
-                { title: 'Forex Markets', icon: Zap, color: 'text-blue-400', summary: 'USD weakening trend intact. EUR/USD and GBP/USD show bullish bias but upcoming central bank events warrant caution. No forex signals approved.', badge: 'CAUTION' },
-                { title: 'Capital Markets', icon: AlertTriangle, color: 'text-purple-400', summary: 'US equities near all-time highs. VIX at 13.2 — low fear. No equity signals meet confidence threshold. Earnings season watchlist active.', badge: 'OBSERVING' },
+                {
+                  title: 'Prediction Markets',
+                  icon:  TrendingUp,
+                  color: 'text-emerald-400',
+                  summary: markets.loading ? 'Loading…' :
+                    `${markets.data?.count ?? 0} markets scanned. ${topMarkets.length} opportunities with ≥5% edge. ${markets.data?.analyzed ? 'AI-scored.' : 'Raw probabilities only.'}`,
+                  badge: markets.data?.analyzed ? `${topMarkets.length} SIGNALS` : 'LOADING',
+                },
+                {
+                  title: 'Crypto Markets',
+                  icon:  Star,
+                  color: 'text-amber-400',
+                  summary: global
+                    ? `Market cap $${(global.totalMarketCap / 1e12).toFixed(2)}T (${global.marketCapChange24h >= 0 ? '+' : ''}${fmt(global.marketCapChange24h, 1)}% 24h). BTC dominance ${fmt(global.btcDominance, 1)}%. Fear & Greed: ${fng?.value ?? '—'} (${fng?.label ?? '…'}).`
+                    : 'Loading CoinGecko data…',
+                  badge: fng ? fng.label.toUpperCase() : 'LOADING',
+                },
+                {
+                  title: 'Macro Environment',
+                  icon:  Zap,
+                  color: 'text-blue-400',
+                  summary: macroData && regime
+                    ? `${regime.label} regime. Fed: ${fmt(macroData.fedFundsRate.current, 2)}%. CPI: ${fmt(macroData.cpiYoY.current, 1)}%. Unemployment: ${fmt(macroData.unemployment.current, 1)}%. Yield spread: ${fmt(macroData.yieldCurveSpread, 2)}%.`
+                    : 'Loading FRED macro data…',
+                  badge: regime ? regime.label : 'LOADING',
+                },
+                {
+                  title: 'Capital Markets',
+                  icon:  AlertTriangle,
+                  color: 'text-purple-400',
+                  summary: macroData
+                    ? `10Y yield ${fmt(macroData.tenYearYield.current, 2)}% (${macroData.tenYearYield.current > macroData.tenYearYield.previous ? '↑' : '↓'} vs prior). VIX: ${fmt(macroData.vix.current, 1)}. USD index: ${fmt(macroData.dollarIndex.current, 1)}.`
+                    : 'Loading…',
+                  badge: macroData ? (macroData.vix.current > 25 ? 'HIGH VOL' : 'NORMAL') : 'LOADING',
+                },
               ].map(m => (
-                <div key={m.title} className="card p-4">
+                <div key={m.title} className="card p-4 fade-in">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
                       <m.icon size={13} className={m.color} />
@@ -102,96 +141,92 @@ export default function BriefingPage() {
             </div>
           </div>
 
-          {/* Right sidebar */}
+          {/* Right sidebar — live data */}
           <div className="space-y-4">
 
-            {/* Top opportunities */}
+            {/* Top opportunities from real data */}
             <div className="card p-4">
-              <div className="text-xs font-bold text-amber-400 tracking-widest uppercase mb-3">⭐ Top Opportunities</div>
-              <div className="space-y-3">
-                {[
-                  { label: 'Top Opportunity', signal: mockTradeSignals[0], icon: Star, color: 'text-amber-400' },
-                  { label: 'Highest Confidence', signal: mockTradeSignals[1], icon: TrendingUp, color: 'text-emerald-400' },
-                  { label: 'Highest EV', signal: mockTradeSignals[0], icon: Zap, color: 'text-blue-400' },
-                ].map(item => item.signal && (
-                  <div key={item.label} className="p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <item.icon size={11} className={item.color} />
-                      <span className="text-[10px] font-semibold text-slate-400">{item.label}</span>
+              <div className="label text-amber-400 mb-3">⭐ Live Opportunities</div>
+              {markets.loading ? (
+                <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="skeleton h-14 rounded-lg" />)}</div>
+              ) : topMarkets.length > 0 ? (
+                <div className="space-y-2">
+                  {topMarkets.map((m, i) => (
+                    <div key={m.id} className="p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Star size={10} className={i === 0 ? 'text-amber-400' : 'text-slate-500'} />
+                        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>#{i + 1} Opportunity</span>
+                      </div>
+                      <div className="text-xs font-semibold text-white leading-tight mb-1"
+                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {m.question}
+                      </div>
+                      <div className="flex gap-2">
+                        {m.edge !== 0 && <span className={cn('badge text-[9px]', m.edge > 0 ? 'badge-green' : 'badge-red')}>
+                          Edge {m.edge > 0 ? '+' : ''}{fmt(m.edge, 1)}%
+                        </span>}
+                        {m.recommendedSide !== 'NONE' && (
+                          <span className={cn('badge text-[9px]', m.recommendedSide === 'YES' ? 'badge-green' : 'badge-red')}>
+                            {m.recommendedSide}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs font-semibold text-white">{item.signal.asset}</div>
-                    <div className="flex gap-2 mt-1 text-[10px]">
-                      <span className="text-emerald-400">EV +{(item.signal.ev * 100).toFixed(0)}%</span>
-                      <span className="text-purple-400">{fmt(item.signal.confidence, 1)}/10</span>
-                      <span className={cn('badge text-[10px]',
-                        item.signal.direction === 'YES' ? 'badge-green' : 'badge-red')}>
-                        {item.signal.direction}
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>
+                  {markets.data?.analyzed ? 'No high-edge opportunities today' : 'AI analysis required for signals'}
+                </div>
+              )}
+            </div>
+
+            {/* Live macro snapshot */}
+            {macroData && (
+              <div className="card p-4">
+                <div className="label text-blue-400 mb-3">FRED Macro Snapshot</div>
+                <div className="space-y-1.5">
+                  {[
+                    { l: 'Fed Funds Rate',  v: `${fmt(macroData.fedFundsRate.current, 2)}%`,    trend: macroData.fedFundsRate.current - macroData.fedFundsRate.previous },
+                    { l: 'CPI YoY',         v: `${fmt(macroData.cpiYoY.current, 1)}%`,          trend: macroData.cpiYoY.current - macroData.cpiYoY.previous },
+                    { l: 'Unemployment',    v: `${fmt(macroData.unemployment.current, 1)}%`,     trend: macroData.unemployment.current - macroData.unemployment.previous },
+                    { l: '10Y Treasury',    v: `${fmt(macroData.tenYearYield.current, 2)}%`,     trend: macroData.tenYearYield.current - macroData.tenYearYield.previous },
+                    { l: 'Yield Spread',    v: `${fmt(macroData.yieldCurveSpread, 2)}%`,         trend: macroData.yieldCurveSpread },
+                    { l: 'VIX',             v: `${fmt(macroData.vix.current, 1)}`,              trend: macroData.vix.previous - macroData.vix.current },
+                  ].map(i => (
+                    <div key={i.l} className="flex justify-between text-xs py-0.5" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>{i.l}</span>
+                      <span className="font-bold mono text-white">
+                        {i.v}
+                        <span className={cn('ml-1 text-[10px]', i.trend > 0 ? 'text-emerald-400' : i.trend < 0 ? 'text-red-400' : 'text-slate-500')}>
+                          {i.trend > 0.01 ? '▲' : i.trend < -0.01 ? '▼' : '→'}
+                        </span>
                       </span>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Markets to avoid */}
+            {/* Data sources */}
             <div className="card p-4">
-              <div className="text-xs font-bold text-red-400 tracking-widest uppercase mb-3">⚠ Markets to Avoid</div>
-              <div className="space-y-2 text-xs">
-                {[
-                  { market: 'CPI Below 2.5%', reason: 'Insufficient edge (market prob matches AI)' },
-                  { market: 'US Unemployment >5%', reason: 'Low confidence score (6.8/10)' },
-                  { market: 'Any Crypto Perp', reason: 'High funding rates — EV eroded by carry' },
-                ].map((item, i) => (
-                  <div key={i} className="p-2 rounded" style={{ background: 'var(--red-dim)' }}>
-                    <div className="font-semibold text-red-400 mb-0.5">{item.market}</div>
-                    <div className="text-slate-500">{item.reason}</div>
+              <div className="label mb-3">Live Data Sources</div>
+              {[
+                { name: 'Polymarket',        url: 'gamma-api.polymarket.com', status: !markets.error ? 'LIVE' : 'ERROR', ok: !markets.error },
+                { name: 'CoinGecko',         url: 'api.coingecko.com',        status: !crypto.error ? 'LIVE' : 'ERROR',  ok: !crypto.error },
+                { name: 'Frankfurter (ECB)', url: 'api.frankfurter.app',      status: 'LIVE',                            ok: true },
+                { name: 'FRED (St Louis Fed)',url: 'fred.stlouisfed.org',      status: !macro.error ? 'LIVE' : 'ERROR',  ok: !macro.error },
+                { name: 'Yahoo Finance',      url: 'query1.finance.yahoo.com', status: 'LIVE',                           ok: true },
+                { name: 'Claude API (AI)',    url: 'api.anthropic.com',        status: briefing.error ? 'KEY NEEDED' : 'LIVE', ok: !briefing.error },
+              ].map(s => (
+                <div key={s.name} className="flex items-center justify-between py-1.5 text-[10px]">
+                  <div>
+                    <div className="font-semibold text-white">{s.name}</div>
+                    <div style={{ color: 'var(--text-dim)' }}>{s.url}</div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Risk warnings */}
-            <div className="card p-4">
-              <div className="text-xs font-bold text-amber-400 tracking-widest uppercase mb-3">Risk Warnings</div>
-              <div className="space-y-2 text-xs text-slate-400">
-                {[
-                  'CPI release Jun 11 — potential volatility spike',
-                  'ECB decision Jun 12 — EUR/USD exposure risk',
-                  'FOMC Jun 18 — reassess all Fed-linked positions',
-                  'BTC funding rate elevated — avoid new longs',
-                ].map((w, i) => (
-                  <div key={i} className="flex items-start gap-1.5">
-                    <span className="text-amber-400 shrink-0 mt-0.5">▸</span>{w}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Portfolio status */}
-            <div className="card p-4">
-              <div className="text-xs font-bold text-blue-400 tracking-widest uppercase mb-3">Portfolio Status</div>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">NAV</span>
-                  <span className="font-bold text-white">{fmtCurrency(mockPortfolioMetrics.nav, true)}</span>
+                  <span className={cn('badge text-[9px]', s.ok ? 'badge-green' : 'badge-amber')}>{s.status}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Daily P&L</span>
-                  <span className="font-bold text-emerald-400">+{fmtCurrency(mockPortfolioMetrics.dailyPnl)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Open Positions</span>
-                  <span className="font-bold text-white">{mockPortfolioMetrics.openPositions}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Risk Utilized</span>
-                  <span className="font-bold text-emerald-400">{fmt(mockPortfolioMetrics.riskUtilization, 1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Health Score</span>
-                  <span className="font-bold text-emerald-400">{mockPortfolioMetrics.portfolioHealthScore}/100</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
