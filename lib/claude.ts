@@ -33,7 +33,7 @@ Analyze this market. Return ONLY valid JSON:
 
   try {
     const response = await client.messages.create({
-      model: 'claude-opus-4-8',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -87,7 +87,7 @@ Include: market environment (1-2 sentences), key opportunity highlight, risk con
 
   try {
     const res = await client.messages.create({
-      model: 'claude-opus-4-8',
+      model: 'claude-sonnet-4-5',
       max_tokens: 500,
       messages: [{ role: 'user', content: prompt }],
     })
