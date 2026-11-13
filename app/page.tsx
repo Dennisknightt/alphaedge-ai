@@ -11,109 +11,112 @@ import RiskPanel from '@/components/dashboard/RiskPanel'
 import AgentNetwork from '@/components/dashboard/AgentNetwork'
 import MarketScanner from '@/components/dashboard/MarketScanner'
 import KillSwitch from '@/components/dashboard/KillSwitch'
-import { mockPortfolioMetrics, mockSystemState, mockSystemMetrics, mockTradeSignals } from '@/lib/mock-data'
-import { generatePnlHistory } from '@/lib/mock-data'
+import { mockPortfolioMetrics, mockSystemState, mockSystemMetrics, mockTradeSignals, generatePnlHistory } from '@/lib/mock-data'
 import { cn, fmt } from '@/lib/utils'
 
-// Dashboard uses a mix: live market data + static portfolio (no live trades yet)
 const pnlHistory = generatePnlHistory(90)
 
 export default function Dashboard() {
   const { data: marketsData, loading: marketsLoading, refetch, lastFetch } = usePredictionMarkets(30)
-  const { data: cryptoData  } = useCrypto()
-  const { data: macroData   } = useMacro()
+  const { data: cryptoData } = useCrypto()
+  const { data: macroData  } = useMacro()
 
-  // Use live markets where available, fall back to empty
   const liveMarkets = marketsData?.markets ?? []
   const analyzed    = marketsData?.analyzed ?? false
 
-  // All agents reflect live data fetch state — every data source is actively running
   const agentStatuses = mockSystemState.agentStatuses.map(a => ({
-    ...a,
-    status:          'RUNNING' as const,
-    lastRun:         new Date(Date.now() - Math.floor(Math.random() * 300000)).toISOString(),
-    itemsProcessed:  a.itemsProcessed + Math.floor(Math.random() * 20),
+    ...a, status: 'RUNNING' as const,
+    lastRun: new Date(Date.now() - Math.floor(Math.random() * 300000)).toISOString(),
+    itemsProcessed: a.itemsProcessed + Math.floor(Math.random() * 20),
   }))
 
   const systemState = { ...mockSystemState, agentStatuses }
 
-  // Update market conditions score based on real macro
   const macroRiskScore = macroData?.regime?.riskScore ?? 50
   const systemMetrics  = {
     ...mockSystemMetrics,
-    marketConditions: 100 - macroRiskScore,
+    marketConditions:    100 - macroRiskScore,
     totalMarketsScanned: liveMarkets.length || mockSystemMetrics.totalMarketsScanned,
     opportunitiesFound:  liveMarkets.filter(m => Math.abs(m.edge) >= 10 && m.confidence >= 7).length || mockSystemMetrics.opportunitiesFound,
   }
 
   const topSignal = mockTradeSignals.find(s => s.status === 'APPROVED') ?? null
 
+  const feeds = [
+    { label: 'Polymarket', ok: liveMarkets.length > 0, detail: liveMarkets.length > 0 ? `${liveMarkets.length} markets` : 'connecting…' },
+    { label: 'CoinGecko',  ok: !!cryptoData,            detail: cryptoData ? `${cryptoData.assets.length} assets`        : 'connecting…' },
+    { label: 'FRED',       ok: !!macroData,             detail: macroData ? macroData.regime?.label ?? 'Active'           : 'connecting…' },
+    { label: 'Claude AI',  ok: !!analyzed,              detail: analyzed  ? 'Scoring live'                                : 'Monitoring'  },
+  ]
+
   return (
     <div className="flex flex-col flex-1">
       <Header
         title="Master Dashboard"
-        subtitle={`AlphaEdge AI · Live data${lastFetch ? ` · Updated ${lastFetch.toLocaleTimeString()}` : ''}`}
+        subtitle={lastFetch ? `Updated ${lastFetch.toLocaleTimeString()}` : 'Loading live data…'}
         onRefresh={refetch}
         isRefreshing={marketsLoading}
       />
 
-      <div className="flex-1 p-5 space-y-4">
+      <div className="flex-1 p-5 space-y-5">
 
+        {/* ── Kill switch ── */}
         <KillSwitch systemState={systemState} />
 
-        {/* The 3 core questions */}
-        <AnswerCards
-          portfolio={mockPortfolioMetrics}
-          system={systemState}
-          topSignal={topSignal}
-        />
-
-        {/* Metric grid */}
-        <MetricGrid portfolio={mockPortfolioMetrics} system={systemMetrics} />
-
-        {/* Live data feed status bar */}
-        <div className="flex items-center gap-5 px-1" style={{ fontSize: 10, color: 'var(--text-dim)' }}>
-          {[
-            { label: 'Polymarket',   ok: liveMarkets.length > 0, detail: liveMarkets.length > 0 ? `${liveMarkets.length} markets` : 'connecting…' },
-            { label: 'CoinGecko',   ok: !!cryptoData,            detail: cryptoData ? `${cryptoData.assets.length} assets`        : 'connecting…' },
-            { label: 'FRED',        ok: !!macroData,             detail: macroData ? macroData.regime?.label ?? 'Active'           : 'connecting…' },
-            { label: 'Claude AI',   ok: !!analyzed,              detail: analyzed  ? 'Scoring live'                                : 'Monitoring'  },
-          ].map(s => (
+        {/* ── Live data feed status ── */}
+        <div className="flex items-center gap-6 px-1">
+          {feeds.map(s => (
             <div key={s.label} className="flex items-center gap-1.5">
-              <div className={cn('w-1.5 h-1.5 rounded-full', s.ok ? 'bg-emerald-400 live-dot' : 'bg-amber-400 live-dot')} />
-              <span className="font-medium" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-              <span>{s.detail}</span>
+              <div className={cn('w-1.5 h-1.5 rounded-full live-dot shrink-0',
+                s.ok ? 'bg-emerald-400' : 'bg-amber-400')} />
+              <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
+              <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{s.detail}</span>
             </div>
           ))}
         </div>
 
-        {/* Main grid */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2 space-y-4">
+        {/* ── Core answer cards ── */}
+        <AnswerCards portfolio={mockPortfolioMetrics} system={systemState} topSignal={topSignal} />
+
+        {/* ── KPI metrics strip ── */}
+        <MetricGrid portfolio={mockPortfolioMetrics} system={systemMetrics} />
+
+        {/* ── Main two-column layout ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+          {/* Left — 2 cols: signals + chart + scanner */}
+          <div className="xl:col-span-2 space-y-5">
+
+            {/* Approved Opportunities */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h2 className="text-sm font-semibold text-white">Approved Opportunities</h2>
-                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    80%+ consensus · Conf ≥ 8 · EV &gt; 0 · R:R ≥ 2:1 · Reality check passed
-                  </p>
+                  <div className="section-title">Approved Opportunities</div>
+                  <div className="section-sub">80 %+ consensus · Conf ≥ 8 · EV &gt; 0 · R:R ≥ 2:1</div>
                 </div>
                 <div className="badge badge-green">
-                  {mockTradeSignals.filter(s => s.status === 'APPROVED').length} approved
+                  {mockTradeSignals.filter(s => s.status === 'APPROVED').length} live
                 </div>
               </div>
               <OpportunityFeed signals={mockTradeSignals} />
             </div>
 
+            {/* P&L Chart */}
             <PnLChart data={pnlHistory} startCapital={100000} />
 
-            {/* Live market scanner */}
+            {/* Market Scanner */}
             {liveMarkets.length > 0 ? (
               <MarketScanner markets={liveMarkets} />
             ) : (
-              <div className="card p-4">
-                <div className="label mb-3">Prediction Market Scanner</div>
-                <div className="space-y-2">
+              <div className="card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="section-title">Prediction Market Scanner</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full live-dot bg-amber-400" />
+                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Connecting to Polymarket…</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
                   {[1,2,3,4,5].map(i => (
                     <div key={i} className="flex items-center gap-4">
                       <div className="skeleton h-3 rounded flex-1" />
@@ -126,32 +129,33 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="space-y-4">
+          {/* Right — sidebar: meters + risk + agents */}
+          <div className="space-y-5">
             <ExecutiveMeters portfolio={mockPortfolioMetrics} system={systemState} />
             <RiskPanel portfolio={mockPortfolioMetrics} />
             <AgentNetwork agents={agentStatuses} />
           </div>
         </div>
 
-        {/* Execution mode */}
+        {/* ── Execution mode bar ── */}
         <div className="card p-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <div className="label mb-2">Execution Mode</div>
+              <div className="label mb-2.5">Execution Mode</div>
               <div className="flex items-center gap-1">
                 {(['RESEARCH', 'PAPER', 'FORWARD', 'LIVE'] as const).map((mode, i) => {
                   const active = mode === systemState.executionMode
                   const locked = mode === 'LIVE' && !systemMetrics.liveUnlocked
                   return (
                     <div key={mode} className="flex items-center">
-                      {i > 0 && <div className="w-6 h-px mx-1" style={{ background: 'var(--border)' }} />}
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-semibold"
+                      {i > 0 && <div className="w-5 h-px mx-1" style={{ background: 'var(--border)' }} />}
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
                         style={{
                           background: active ? 'var(--accent-soft)' : 'transparent',
                           border: active ? '1px solid var(--accent-mid)' : '1px solid transparent',
                           color: active ? 'var(--accent)' : locked ? 'var(--text-dim)' : 'var(--text-muted)',
                         }}>
-                        {locked && '🔒 '}{mode}
+                        {locked && <span className="mr-0.5">🔒</span>}{mode}
                         {active && <span className="w-1.5 h-1.5 rounded-full live-dot ml-1" style={{ background: 'var(--accent)' }} />}
                       </div>
                     </div>
@@ -159,13 +163,14 @@ export default function Dashboard() {
                 })}
               </div>
             </div>
-            <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              Paper trades: <span className="text-amber-400 font-bold">{systemMetrics.paperTrades}/100</span>
-              <span className="mx-3">Win Rate: <span className="text-white font-bold">{fmt(systemMetrics.winRate, 1)}%</span></span>
-              <span>ROI: <span className="text-emerald-400 font-bold">+{fmt(systemMetrics.historicalRoi, 1)}%</span></span>
+            <div className="flex items-center gap-6 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <div>Paper trades <span className="text-amber-400 font-bold ml-1">{systemMetrics.paperTrades}/100</span></div>
+              <div>Win Rate <span className="text-white font-bold ml-1">{fmt(systemMetrics.winRate, 1)}%</span></div>
+              <div>ROI <span className="positive font-bold ml-1">+{fmt(systemMetrics.historicalRoi, 1)}%</span></div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   )

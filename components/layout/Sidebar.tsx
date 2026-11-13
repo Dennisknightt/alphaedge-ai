@@ -5,46 +5,46 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Zap, TrendingUp, Bitcoin, DollarSign, BarChart2,
   Briefcase, FileText, Settings, Shield, Cpu, Activity,
-  ChevronLeft, ChevronRight, Search, Menu
+  ChevronLeft, ChevronRight, Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/lib/context'
 
-const navSections = [
+const nav = [
   {
     label: 'Core',
     items: [
-      { href: '/',             label: 'Dashboard',          icon: LayoutDashboard },
-      { href: '/opportunities',label: 'Opportunities',      icon: Zap },
+      { href: '/',              label: 'Dashboard',    icon: LayoutDashboard },
+      { href: '/opportunities', label: 'Opportunities',icon: Zap },
     ],
   },
   {
     label: 'Markets',
     items: [
-      { href: '/markets/prediction', label: 'Prediction',   icon: TrendingUp },
-      { href: '/markets/crypto',     label: 'Crypto',       icon: Bitcoin },
-      { href: '/markets/forex',      label: 'Forex',        icon: DollarSign },
-      { href: '/markets/equities',   label: 'Equities',     icon: BarChart2 },
+      { href: '/markets/prediction', label: 'Prediction', icon: TrendingUp },
+      { href: '/markets/crypto',     label: 'Crypto',     icon: Bitcoin },
+      { href: '/markets/forex',      label: 'Forex',      icon: DollarSign },
+      { href: '/markets/equities',   label: 'Equities',   icon: BarChart2 },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { href: '/research',    label: 'Agents',              icon: Cpu },
-      { href: '/briefing',    label: 'Reports',             icon: FileText },
+      { href: '/research', label: 'AI Agents', icon: Cpu },
+      { href: '/briefing', label: 'Reports',   icon: FileText },
     ],
   },
   {
     label: 'Portfolio',
     items: [
-      { href: '/portfolio',   label: 'Portfolio',           icon: Briefcase },
-      { href: '/risk',        label: 'Risk Center',         icon: Shield },
+      { href: '/portfolio', label: 'Portfolio',   icon: Briefcase },
+      { href: '/risk',      label: 'Risk Center', icon: Shield },
     ],
   },
   {
     label: 'System',
     items: [
-      { href: '/settings',    label: 'Settings',            icon: Settings },
+      { href: '/settings', label: 'Settings', icon: Settings },
     ],
   },
 ]
@@ -57,51 +57,56 @@ export default function Sidebar() {
     <aside
       className={cn('sidebar fixed left-0 top-0 h-screen z-40 flex flex-col',
         sidebarCollapsed && 'collapsed')}
-      style={{ background: 'var(--bg-surface)', borderRight: '1px solid var(--border)' }}
+      style={{
+        background: 'linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-base) 100%)',
+        borderRight: '1px solid var(--border)',
+      }}
     >
-      {/* Logo + toggle */}
-      <div className="flex items-center justify-between px-3 py-3.5"
-        style={{ borderBottom: '1px solid var(--border)', minHeight: '52px' }}>
-        {!sidebarCollapsed && (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)' }}>
-              <Activity size={14} className="text-white" />
+      {/* Logo */}
+      <div className="flex items-center px-3 py-4"
+        style={{ borderBottom: '1px solid var(--border)', minHeight: 'var(--header-height)' }}>
+        {sidebarCollapsed ? (
+          <button onClick={toggleSidebar} className="mx-auto">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #4f8ef7 0%, #7c5df7 100%)', boxShadow: '0 4px 12px rgba(79,142,247,0.35)' }}>
+              <Activity size={15} className="text-white" />
             </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-white leading-tight truncate">AlphaEdge</div>
-              <div className="text-[9px] font-bold tracking-widest" style={{ color: 'var(--accent)' }}>AI · INSTITUTIONAL</div>
-            </div>
-          </div>
-        )}
-        {sidebarCollapsed && (
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto"
-            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)' }}>
-            <Activity size={14} className="text-white" />
-          </div>
-        )}
-        {!sidebarCollapsed && (
-          <button onClick={toggleSidebar}
-            className="p-1.5 rounded-md hover:bg-white/5 transition-colors shrink-0"
-            style={{ color: 'var(--text-muted)' }}>
-            <ChevronLeft size={14} />
           </button>
+        ) : (
+          <>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mr-2.5"
+              style={{ background: 'linear-gradient(135deg, #4f8ef7 0%, #7c5df7 100%)', boxShadow: '0 4px 12px rgba(79,142,247,0.35)' }}>
+              <Activity size={15} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-bold text-white leading-tight">AlphaEdge</div>
+              <div className="text-[9px] font-bold tracking-widest"
+                style={{ background: 'linear-gradient(90deg, #4f8ef7, #7c5df7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                AI · INSTITUTIONAL
+              </div>
+            </div>
+            <button onClick={toggleSidebar}
+              className="p-1.5 rounded-lg hover:bg-white/5 transition-colors shrink-0"
+              style={{ color: 'var(--text-dim)' }}>
+              <ChevronLeft size={14} />
+            </button>
+          </>
         )}
       </div>
 
-      {/* Search shortcut */}
+      {/* Search */}
       {!sidebarCollapsed ? (
         <button onClick={() => setSearchOpen(true)}
-          className="mx-2 mt-2 flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all"
+          className="mx-3 mt-3 flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
           <Search size={12} />
-          <span className="flex-1 text-left">Search...</span>
+          <span className="flex-1 text-left text-[12px]">Search…</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded"
             style={{ background: 'rgba(255,255,255,0.07)', color: 'var(--text-dim)' }}>⌘K</span>
         </button>
       ) : (
         <button onClick={() => setSearchOpen(true)}
-          className="mx-auto mt-2 p-2 rounded-md hover:bg-white/5 transition-colors"
+          className="mx-auto mt-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
           style={{ color: 'var(--text-muted)' }}
           data-tooltip="Search (⌘K)">
           <Search size={15} />
@@ -109,12 +114,13 @@ export default function Sidebar() {
       )}
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-4">
-        {navSections.map(section => (
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-5 scroll-area">
+        {nav.map(section => (
           <div key={section.label}>
             {!sidebarCollapsed && (
-              <div className="px-2 mb-1 label">{section.label}</div>
+              <div className="nav-section-label mb-2">{section.label}</div>
             )}
+            {sidebarCollapsed && <div className="my-1 mx-2 divider" />}
             <div className="space-y-0.5">
               {section.items.map(item => {
                 const active = pathname === item.href
@@ -123,7 +129,7 @@ export default function Sidebar() {
                     className={cn('nav-item', active && 'active')}
                     data-tooltip={sidebarCollapsed ? item.label : undefined}>
                     <item.icon size={15} className="nav-icon shrink-0" />
-                    {!sidebarCollapsed && <span>{item.label}</span>}
+                    {!sidebarCollapsed && <span className="text-[12.5px]">{item.label}</span>}
                   </Link>
                 )
               })}
@@ -132,21 +138,22 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Expand button when collapsed */}
+      {/* Expand (collapsed state) */}
       {sidebarCollapsed && (
         <button onClick={toggleSidebar}
-          className="mx-auto mb-3 p-2 rounded-md hover:bg-white/5 transition-colors"
-          style={{ color: 'var(--text-muted)' }}>
+          className="mx-auto mb-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+          style={{ color: 'var(--text-dim)' }}>
           <ChevronRight size={14} />
         </button>
       )}
 
-      {/* Version */}
+      {/* Footer status */}
       {!sidebarCollapsed && (
-        <div className="px-3 py-2.5 flex items-center justify-between"
+        <div className="px-3 py-3 flex items-center gap-2"
           style={{ borderTop: '1px solid var(--border)' }}>
-          <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>v1.0 · Paper Mode</span>
-          <span className="badge badge-green">LIVE</span>
+          <div className="w-1.5 h-1.5 rounded-full live-dot" style={{ background: 'var(--emerald)' }} />
+          <span className="text-[10px] flex-1" style={{ color: 'var(--text-dim)' }}>All systems live</span>
+          <span className="badge badge-green text-[9px]">v1.0</span>
         </div>
       )}
     </aside>
