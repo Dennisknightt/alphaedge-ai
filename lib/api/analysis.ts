@@ -56,7 +56,7 @@ Return ONLY valid JSON (no markdown, no explanation outside JSON):
 
   try {
     const resp = await client.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-opus-5-5',
       max_tokens: 1200,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -126,7 +126,7 @@ Rules:
 
   try {
     const resp = await client.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-5-5',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -211,7 +211,7 @@ Style: Bloomberg Intelligence meets Bridgewater Daily Observations. Professional
 
   try {
     const resp = await client.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-opus-5-5',
       max_tokens: 700,
       messages: [{ role: 'user', content: prompt }],
     })
