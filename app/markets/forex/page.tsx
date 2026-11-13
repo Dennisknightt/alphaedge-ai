@@ -6,6 +6,10 @@ import { cn, fmtPct, fmt } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { SkeletonTable } from '@/components/ui/SkeletonLoader'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
+import dynamic from 'next/dynamic'
+
+const BrokerPanel  = dynamic(() => import('@/components/broker/BrokerPanel'),  { ssr: false })
+const ExecuteButton = dynamic(() => import('@/components/broker/ExecuteButton'), { ssr: false })
 
 export default function ForexPage() {
   const { data: forexData, loading, error, refetch, lastFetch } = useForex()
@@ -35,7 +39,8 @@ export default function ForexPage() {
         isRefreshing={loading}
       />
 
-      <div className="p-5 space-y-4">
+      <div className="p-5 flex gap-5">
+      <div className="flex-1 space-y-4">
 
         {/* Macro context from FRED */}
         {macro && regime && (
@@ -121,6 +126,7 @@ export default function ForexPage() {
                   <th>IR Differential</th>
                   <th>CB Bias</th>
                   <th>Trend</th>
+                  <th>Execute</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,13 +167,25 @@ export default function ForexPage() {
                         {pair.trend}
                       </span>
                     </td>
+                    <td>
+                      <ExecuteButton
+                        symbol={pair.pair}
+                        direction={pair.trend === 'BEARISH' ? 'SELL' : 'BUY'}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+      </div>{/* end flex-1 */}
+
+      {/* Broker sidebar */}
+      <div className="w-64 shrink-0 space-y-3 pt-0">
+        <BrokerPanel />
       </div>
+      </div>{/* end flex gap-5 */}
     </div>
   )
 }
