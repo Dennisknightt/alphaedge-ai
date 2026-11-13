@@ -1,6 +1,6 @@
 'use client'
 
-import { usePredictionMarkets, useCrypto, useMacro } from '@/hooks/useMarkets'
+import { usePredictionMarkets, useMacro } from '@/hooks/useMarkets'
 import Header from '@/components/layout/Header'
 import MetricGrid from '@/components/dashboard/MetricGrid'
 import AnswerCards from '@/components/dashboard/AnswerCards'
@@ -12,17 +12,15 @@ import AgentNetwork from '@/components/dashboard/AgentNetwork'
 import MarketScanner from '@/components/dashboard/MarketScanner'
 import KillSwitch from '@/components/dashboard/KillSwitch'
 import { mockPortfolioMetrics, mockSystemState, mockSystemMetrics, mockTradeSignals, generatePnlHistory } from '@/lib/mock-data'
-import { cn, fmt } from '@/lib/utils'
+import { fmt } from '@/lib/utils'
 
 const pnlHistory = generatePnlHistory(90)
 
 export default function Dashboard() {
   const { data: marketsData, loading: marketsLoading, refetch, lastFetch } = usePredictionMarkets(30)
-  const { data: cryptoData } = useCrypto()
-  const { data: macroData  } = useMacro()
+  const { data: macroData } = useMacro()
 
   const liveMarkets = marketsData?.markets ?? []
-  const analyzed    = marketsData?.analyzed ?? false
 
   const agentStatuses = mockSystemState.agentStatuses.map(a => ({
     ...a, status: 'RUNNING' as const,
@@ -40,14 +38,8 @@ export default function Dashboard() {
     opportunitiesFound:  liveMarkets.filter(m => Math.abs(m.edge) >= 10 && m.confidence >= 7).length || mockSystemMetrics.opportunitiesFound,
   }
 
-  const topSignal = mockTradeSignals.find(s => s.status === 'APPROVED') ?? null
-
-  const feeds = [
-    { label: 'Polymarket', ok: liveMarkets.length > 0, detail: liveMarkets.length > 0 ? `${liveMarkets.length} markets` : 'connecting…' },
-    { label: 'CoinGecko',  ok: !!cryptoData,            detail: cryptoData ? `${cryptoData.assets.length} assets`        : 'connecting…' },
-    { label: 'FRED',       ok: !!macroData,             detail: macroData ? macroData.regime?.label ?? 'Active'           : 'connecting…' },
-    { label: 'Claude AI',  ok: !!analyzed,              detail: analyzed  ? 'Scoring live'                                : 'Monitoring'  },
-  ]
+  const approvedSignals = mockTradeSignals.filter(s => s.status === 'APPROVED' && s.realityCheckPassed)
+  const topSignal = approvedSignals[0] ?? null
 
   return (
     <div className="flex flex-col flex-1">
@@ -63,23 +55,14 @@ export default function Dashboard() {
         {/* ── Kill switch ── */}
         <KillSwitch systemState={systemState} />
 
-        {/* ── Live data feed status ── */}
-        <div className="flex items-center gap-6 px-1">
-          {feeds.map(s => (
-            <div key={s.label} className="flex items-center gap-1.5">
-              <div className={cn('w-1.5 h-1.5 rounded-full live-dot shrink-0',
-                s.ok ? 'bg-emerald-400' : 'bg-amber-400')} />
-              <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-              <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{s.detail}</span>
-            </div>
-          ))}
-        </div>
+        <AnswerCards
+          portfolio={mockPortfolioMetrics}
+          system={systemState}
+          topSignal={topSignal}
+          approvedCount={approvedSignals.length}
+        />
 
-        {/* ── Core answer cards ── */}
-        <AnswerCards portfolio={mockPortfolioMetrics} system={systemState} topSignal={topSignal} />
-
-        {/* ── KPI metrics strip ── */}
-        <MetricGrid portfolio={mockPortfolioMetrics} system={systemMetrics} />
+        <MetricGrid portfolio={mockPortfolioMetrics} />
 
         {/* ── Main two-column layout ── */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -88,18 +71,15 @@ export default function Dashboard() {
           <div className="xl:col-span-2 space-y-5">
 
             {/* Approved Opportunities */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="section-title">Approved Opportunities</div>
-                  <div className="section-sub">80 %+ consensus · Conf ≥ 8 · EV &gt; 0 · R:R ≥ 2:1</div>
-                </div>
-                <div className="badge badge-green">
-                  {mockTradeSignals.filter(s => s.status === 'APPROVED').length} live
-                </div>
+            <section>
+              <div className="flex items-baseline justify-between mb-3">
+                <h2 className="section-title">Opportunities</h2>
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                  {approvedSignals.length} approved today
+                </span>
               </div>
               <OpportunityFeed signals={mockTradeSignals} />
-            </div>
+            </section>
 
             {/* P&L Chart */}
             <PnLChart data={pnlHistory} startCapital={100000} />
